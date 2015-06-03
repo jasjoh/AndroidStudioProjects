@@ -46,20 +46,33 @@ public class GameView extends SurfaceView implements Runnable {
         gameCanvas = new Canvas(gameImage);  // create the canvas associated with our gameImage bitmap;  we will draw on this
         graphics = new Painter(gameCanvas);  // create our Painter proxy for the canvas we just created
 
-        // our SurfaceHolder is where we define code that runs when the app is activated or de-activated
+        // When a surface like our GameView is created or destroyed, methods within a Callback of it's SurfaceHolder are called
+        // If we want to implement behavior that occurs during these events, we need to:
+        // a. add a Callback object to the SurfaceHolder of our GameView
+        // b. override the methods within that Callback to do what we want
+
+        // First, we retrieve the SurfaceHolder for our GameView so that we can add a Callback to it
+        // getHolder() is a built in method of a SurfaceView which returns it's holder object
         SurfaceHolder holder = getHolder();
+
+        // Next, we need to create a Callback object and add it to the SurfaceHolder via addCallback()
+        // the addCallback() method expects a Callback object (an object that implements the Callback interface)
+        // we leverage an Anonymous Inner Class to define an object that implements the Callback interface within the addCallBack() method call itself
+        // alternatively we could have had our GameView class implement SurfaceHolder.Callback ...
+        // ... and then defined the overridden methods within the GameView class, passing 'this' into the addCallback() method
+
         holder.addCallback(new SurfaceHolder.Callback() {
 
             @Override
             // this method is called by Android when our app is activated
             // this is similar to addNotify() method in Java
             public void surfaceCreated(SurfaceHolder holder) {
-                // Log.d("GameView", "Surface Created");
+                Log.d("GameView", "Surface Created");
                 initInput(); // setup our input handler to watch for touch events
                 if (currentState == null) { // only load assets if app is opened for first time
-                    setCurrentState(new LoadState());
+                    setCurrentState(new LoadState()); // load assets
                 }
-                initGame();
+                initGame(); // start the game thread
             }
 
             @Override
@@ -69,8 +82,8 @@ public class GameView extends SurfaceView implements Runnable {
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                // Log.d("GameView", "Surface Destroyed");
-                pauseGame();
+                Log.d("GameView", "Surface Destroyed");
+                pauseGame(); // pause the thread
             }
         });
     }
@@ -96,19 +109,31 @@ public class GameView extends SurfaceView implements Runnable {
 
     private void initGame() {
         running = true;
+        try{
+            Log.d("initGame()", "gameThread.getName()" + gameThread.getName());
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
         gameThread = new Thread(this, "Game Thread");
         gameThread.start();
     }
 
     private void pauseGame() {
         running = false;
-        while (gameThread.isAlive()) {
+        while (gameThread.isAlive()) { // if a thread
             try {
                 gameThread.join(); // tells the thread to stop executing while app is paused
+                Log.d("gameThreadJoined", "gameThread.isAlive()" + gameThread.isAlive());
                 break;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
+        Log.d("pauseGameFinished", "gameThread.isAlive()" + gameThread.isAlive());
+        try{
+            Log.d("pauseGameFinished", "gameThread.getName()" + gameThread.getName());
+        } catch (NullPointerException e) {
+            e.printStackTrace();
         }
     }
 
